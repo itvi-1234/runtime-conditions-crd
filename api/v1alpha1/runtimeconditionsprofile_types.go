@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
@@ -38,7 +37,7 @@ type Workload struct {
 // ConditionInterface is the workload-facing interface requirement for a
 // Condition. `type` is the only field the core spec reserves; everything
 // else here is extension-defined (operations, engine, etc.), so we don't
-// type it - we keep it and let the admission webhook validate it against
+// type it - we keep it and let a validating webhook check it against
 // whatever extension the profile declared.
 type ConditionInterface struct {
 	// +required
@@ -50,9 +49,7 @@ type ConditionInterface struct {
 //
 // name/optional/kind/interface.type are the fields the core spec reserves,
 // so they're typed and validated here. Everything extension-defined
-// (additional interface fields, all of configuration) is left schemaless -
-// see docs/design/extension-validation.md for why that split exists and
-// what still needs to happen in the admission webhook.
+// (additional interface fields) is left schemaless.
 type Condition struct {
 	// name is a unique label for this condition within the profile.
 	// +optional
@@ -65,7 +62,7 @@ type Condition struct {
 
 	// kind is the extension-defined integration classification, e.g.
 	// "api", "datastore", "cache". Whether a given value is actually
-	// backed by a resolved extension is checked in the webhook, not here.
+	// backed by a resolved extension is checked by a webhook, not here.
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	Kind string `json:"kind"`
@@ -73,27 +70,23 @@ type Condition struct {
 	// +required
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Interface ConditionInterface `json:"interface"`
-
-	// configuration describes how resolved values bind into the
-	// workload's runtime config (env vars, etc). Fully extension-defined.
-	// +optional
-	// +kubebuilder:pruning:PreserveUnknownFields
-	// +kubebuilder:validation:Schemaless
-	Configuration *apiextensionsv1.JSON `json:"configuration,omitempty"`
 }
 
-// RuntimeConditionsProfileSpec is the profile's desired state.
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:shortName=rcp;rcprofile;rcprofiles
+
+// RuntimeConditionsProfile is the Schema for the runtimeconditionsprofiles API.
 //
-// Only the core, spec-reserved shape is validated statically here -
-// workload identity, the extension list, and each condition's reserved
-// fields. What a condition's kind/interface actually means is defined by
-// whichever extensions the profile declares, so that part is intentionally
-// left schemaless and pushed to a validating admission webhook (see
-// docs/design/extension-validation.md).
-//
-// metadata.name/labels from the spec map onto this CR's own ObjectMeta, so
-// they're not duplicated here.
-type RuntimeConditionsProfileSpec struct {
+// Its shape mirrors the Runtime Conditions Profile document directly:
+// workload/extensions/conditions are top-level fields, not nested under a
+// spec, the same way ConfigMap's data is top-level.
+type RuntimeConditionsProfile struct {
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is a standard object metadata
+	// +optional
+	metav1.ObjectMeta `json:"metadata,omitzero"`
+
 	// +required
 	Workload Workload `json:"workload"`
 
@@ -105,49 +98,9 @@ type RuntimeConditionsProfileSpec struct {
 	Extensions []string `json:"extensions"`
 
 	// conditions is the workload's external runtime dependencies. Can be
-	// empty. Vocabulary validation (is this kind/interface.type actually
-	// defined by an extension, condition name uniqueness, JSON Schema
-	// checks) happens in the admission webhook, not in this schema.
+	// empty.
 	// +required
 	Conditions []Condition `json:"conditions"`
-}
-
-// RuntimeConditionsProfileStatus defines the observed state of RuntimeConditionsProfile.
-type RuntimeConditionsProfileStatus struct {
-	// conditions represent the current state of the RuntimeConditionsProfile resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
-	// +listType=map
-	// +listMapKey=type
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-}
-
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=rcprofile;rcprofiles
-
-// RuntimeConditionsProfile is the Schema for the runtimeconditionsprofiles API
-type RuntimeConditionsProfile struct {
-	metav1.TypeMeta `json:",inline"`
-
-	// metadata is a standard object metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitzero"`
-
-	// spec defines the desired state of RuntimeConditionsProfile
-	// +required
-	Spec RuntimeConditionsProfileSpec `json:"spec"`
-
-	// status defines the observed state of RuntimeConditionsProfile
-	// +optional
-	Status RuntimeConditionsProfileStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true

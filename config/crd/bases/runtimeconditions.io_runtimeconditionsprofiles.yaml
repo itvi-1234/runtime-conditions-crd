@@ -12,6 +12,7 @@ spec:
     listKind: RuntimeConditionsProfileList
     plural: runtimeconditionsprofiles
     shortNames:
+    - rcp
     - rcprofile
     - rcprofiles
     singular: runtimeconditionsprofile
@@ -20,8 +21,12 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: RuntimeConditionsProfile is the Schema for the runtimeconditionsprofiles
-          API
+        description: |-
+          RuntimeConditionsProfile is the Schema for the runtimeconditionsprofiles API.
+
+          Its shape mirrors the Runtime Conditions Profile document directly:
+          workload/extensions/conditions are top-level fields, not nested under a
+          spec, the same way ConfigMap's data is top-level.
         properties:
           apiVersion:
             description: |-
@@ -30,6 +35,65 @@ spec:
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
+          conditions:
+            description: |-
+              conditions is the workload's external runtime dependencies. Can be
+              empty.
+            items:
+              description: |-
+                Condition is one external runtime dependency a workload requires.
+
+                name/optional/kind/interface.type are the fields the core spec reserves,
+                so they're typed and validated here. Everything extension-defined
+                (additional interface fields) is left schemaless.
+              properties:
+                interface:
+                  description: |-
+                    ConditionInterface is the workload-facing interface requirement for a
+                    Condition. `type` is the only field the core spec reserves; everything
+                    else here is extension-defined (operations, engine, etc.), so we don't
+                    type it - we keep it and let a validating webhook check it against
+                    whatever extension the profile declared.
+                  properties:
+                    type:
+                      minLength: 1
+                      type: string
+                  required:
+                  - type
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                kind:
+                  description: |-
+                    kind is the extension-defined integration classification, e.g.
+                    "api", "datastore", "cache". Whether a given value is actually
+                    backed by a resolved extension is checked by a webhook, not here.
+                  minLength: 1
+                  type: string
+                name:
+                  description: name is a unique label for this condition within the
+                    profile.
+                  minLength: 1
+                  type: string
+                optional:
+                  default: false
+                  type: boolean
+              required:
+              - interface
+              - kind
+              type: object
+            type: array
+          extensions:
+            description: |-
+              extensions is the list of extension identifiers (absolute URIs) this
+              profile depends on. Can be empty, can't have duplicates.
+            items:
+              type: string
+            type: array
+            x-kubernetes-validations:
+            - message: each extension must be an absolute URI with a scheme
+              rule: self.all(e, e.matches('^[a-zA-Z][a-zA-Z0-9+.-]*://.+'))
+            - message: extensions must not contain duplicate identifiers
+              rule: self.all(x, self.exists_one(y, y == x))
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -40,176 +104,26 @@ spec:
             type: string
           metadata:
             type: object
-          spec:
-            description: spec defines the desired state of RuntimeConditionsProfile
+          workload:
+            description: Workload identifies the single application a profile describes.
             properties:
-              conditions:
-                description: |-
-                  conditions is the workload's external runtime dependencies. Can be
-                  empty. Vocabulary validation (is this kind/interface.type actually
-                  defined by an extension, condition name uniqueness, JSON Schema
-                  checks) happens in the admission webhook, not in this schema.
-                items:
-                  description: |-
-                    Condition is one external runtime dependency a workload requires.
-
-                    name/optional/kind/interface.type are the fields the core spec reserves,
-                    so they're typed and validated here. Everything extension-defined
-                    (additional interface fields, all of configuration) is left schemaless -
-                    see docs/design/extension-validation.md for why that split exists and
-                    what still needs to happen in the admission webhook.
-                  properties:
-                    configuration:
-                      description: |-
-                        configuration describes how resolved values bind into the
-                        workload's runtime config (env vars, etc). Fully extension-defined.
-                      x-kubernetes-preserve-unknown-fields: true
-                    interface:
-                      description: |-
-                        ConditionInterface is the workload-facing interface requirement for a
-                        Condition. `type` is the only field the core spec reserves; everything
-                        else here is extension-defined (operations, engine, etc.), so we don't
-                        type it - we keep it and let the admission webhook validate it against
-                        whatever extension the profile declared.
-                      properties:
-                        type:
-                          minLength: 1
-                          type: string
-                      required:
-                      - type
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                    kind:
-                      description: |-
-                        kind is the extension-defined integration classification, e.g.
-                        "api", "datastore", "cache". Whether a given value is actually
-                        backed by a resolved extension is checked in the webhook, not here.
-                      minLength: 1
-                      type: string
-                    name:
-                      description: name is a unique label for this condition within
-                        the profile.
-                      minLength: 1
-                      type: string
-                    optional:
-                      default: false
-                      type: boolean
-                  required:
-                  - interface
-                  - kind
-                  type: object
-                type: array
-              extensions:
-                description: |-
-                  extensions is the list of extension identifiers (absolute URIs) this
-                  profile depends on. Can be empty, can't have duplicates.
-                items:
-                  type: string
-                type: array
-                x-kubernetes-validations:
-                - message: each extension must be an absolute URI with a scheme
-                  rule: self.all(e, e.matches('^[a-zA-Z][a-zA-Z0-9+.-]*://.+'))
-                - message: extensions must not contain duplicate identifiers
-                  rule: self.all(x, self.exists_one(y, y == x))
-              workload:
-                description: Workload identifies the single application a profile
-                  describes.
-                properties:
-                  uri:
-                    description: uri is a stable identifier for the workload, e.g.
-                      a repo URL.
-                    minLength: 1
-                    type: string
-                  version:
-                    description: version is the workload version this profile was
-                      generated for.
-                    minLength: 1
-                    type: string
-                required:
-                - uri
-                type: object
+              uri:
+                description: uri is a stable identifier for the workload, e.g. a repo
+                  URL.
+                minLength: 1
+                type: string
+              version:
+                description: version is the workload version this profile was generated
+                  for.
+                minLength: 1
+                type: string
             required:
-            - conditions
-            - extensions
-            - workload
-            type: object
-          status:
-            description: status defines the observed state of RuntimeConditionsProfile
-            properties:
-              conditions:
-                description: |-
-                  conditions represent the current state of the RuntimeConditionsProfile resource.
-                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
-
-                  Standard condition types include:
-                  - "Available": the resource is fully functional
-                  - "Progressing": the resource is being created or updated
-                  - "Degraded": the resource failed to reach or maintain its desired state
-
-                  The status of each condition is one of True, False, or Unknown.
-                items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
-                  properties:
-                    lastTransitionTime:
-                      description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
-                      format: date-time
-                      type: string
-                    message:
-                      description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      description: status of the condition, one of True, False, Unknown.
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-                x-kubernetes-list-map-keys:
-                - type
-                x-kubernetes-list-type: map
+            - uri
             type: object
         required:
-        - spec
+        - conditions
+        - extensions
+        - workload
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
