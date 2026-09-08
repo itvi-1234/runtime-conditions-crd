@@ -123,6 +123,7 @@ spec:
         required:
         - conditions
         - extensions
+        - metadata
         - workload
         type: object
     served: true

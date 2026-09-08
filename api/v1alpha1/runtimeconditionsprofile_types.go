@@ -84,7 +84,7 @@ type RuntimeConditionsProfile struct {
 	metav1.TypeMeta `json:",inline"`
 
 	// metadata is a standard object metadata
-	// +optional
+	// +required
 	metav1.ObjectMeta `json:"metadata,omitzero"`
 
 	// +required
