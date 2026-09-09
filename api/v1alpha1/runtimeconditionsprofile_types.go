@@ -49,7 +49,9 @@ type ConditionInterface struct {
 //
 // name/optional/kind/interface.type are the fields the core spec reserves,
 // so they're typed and validated here. Everything extension-defined
-// (additional interface fields) is left schemaless.
+// (additional interface fields, and any extra condition-level fields an
+// extension's conditionFields declare) is left schemaless.
+// +kubebuilder:pruning:PreserveUnknownFields
 type Condition struct {
 	// name is a unique label for this condition within the profile.
 	// +optional
@@ -93,13 +95,15 @@ type RuntimeConditionsProfile struct {
 	// extensions is the list of extension identifiers (absolute URIs) this
 	// profile depends on. Can be empty, can't have duplicates.
 	// +required
-	// +kubebuilder:validation:XValidation:rule="self.all(e, e.matches('^[a-zA-Z][a-zA-Z0-9+.-]*://.+'))",message="each extension must be an absolute URI with a scheme"
+	// +kubebuilder:validation:items:Format=uri
+	// +kubebuilder:validation:XValidation:rule="self.all(e, e.matches('^[A-Za-z][A-Za-z0-9+.-]*:'))",message="each extension must have a URI scheme"
 	// +kubebuilder:validation:XValidation:rule="self.all(x, self.exists_one(y, y == x))",message="extensions must not contain duplicate identifiers"
 	Extensions []string `json:"extensions"`
 
 	// conditions is the workload's external runtime dependencies. Can be
 	// empty.
 	// +required
+	// +kubebuilder:validation:XValidation:rule="self.filter(c, has(c.name)).all(c, self.filter(d, has(d.name) && d.name == c.name).size() == 1)",message="condition names must be unique within the profile"
 	Conditions []Condition `json:"conditions"`
 }
 

@@ -13,7 +13,6 @@ manager binary in this repo.
 | `config/crd/bases/*.yaml` | Generated CRD manifest. DO NOT EDIT by hand - run `make manifests`. |
 | `config/samples/*.yaml` | Example CR. Edit these if the schema changes. |
 | `config/rbac/runtimeconditionsprofile_{admin,editor,viewer}_role.yaml` | Convenience ClusterRoles for people/service accounts using the CRD. Not tied to any controller. |
-| `docs/design/extension-validation.md` | Why the schema is shaped the way it is, and what's still an open decision. |
 
 After editing `api/v1alpha1/*_types.go`, always run:
 

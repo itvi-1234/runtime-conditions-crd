@@ -45,7 +45,8 @@ spec:
 
                 name/optional/kind/interface.type are the fields the core spec reserves,
                 so they're typed and validated here. Everything extension-defined
-                (additional interface fields) is left schemaless.
+                (additional interface fields, and any extra condition-level fields an
+                extension's conditionFields declare) is left schemaless.
               properties:
                 interface:
                   description: |-
@@ -81,17 +82,23 @@ spec:
               - interface
               - kind
               type: object
+              x-kubernetes-preserve-unknown-fields: true
             type: array
+            x-kubernetes-validations:
+            - message: condition names must be unique within the profile
+              rule: self.filter(c, has(c.name)).all(c, self.filter(d, has(d.name)
+                && d.name == c.name).size() == 1)
           extensions:
             description: |-
               extensions is the list of extension identifiers (absolute URIs) this
               profile depends on. Can be empty, can't have duplicates.
             items:
+              format: uri
               type: string
             type: array
             x-kubernetes-validations:
-            - message: each extension must be an absolute URI with a scheme
-              rule: self.all(e, e.matches('^[a-zA-Z][a-zA-Z0-9+.-]*://.+'))
+            - message: each extension must have a URI scheme
+              rule: self.all(e, e.matches('^[A-Za-z][A-Za-z0-9+.-]*:'))
             - message: extensions must not contain duplicate identifiers
               rule: self.all(x, self.exists_one(y, y == x))
           kind:

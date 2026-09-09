@@ -1,8 +1,8 @@
 module github.com/runtimeconditions/runtime-conditions-crd
 
-go 1.26.0
+go 1.25.0
 
-require k8s.io/apimachinery v0.37.0
+require k8s.io/apimachinery v0.35.0
 
 require (
 	github.com/fxamacker/cbor/v2 v2.9.1 // indirect
