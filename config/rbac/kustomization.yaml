@@ -1,0 +1,7 @@
+# Admin/Editor/Viewer roles for humans and service accounts working with
+# RuntimeConditionsProfile resources. These are convenience roles for
+# consumers of the CRD, not RBAC for any controller/manager.
+resources:
+- runtimeconditionsprofile_admin_role.yaml
+- runtimeconditionsprofile_editor_role.yaml
+- runtimeconditionsprofile_viewer_role.yaml
