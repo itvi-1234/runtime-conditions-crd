@@ -1,0 +1,60 @@
+{{- if .Values.rbac.create }}
+# Convenience ClusterRoles for people/service accounts using the CRD. Not
+# tied to any controller in this repo - hand these out as needed.
+
+# Full control over RuntimeConditionsProfile resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: runtime-conditions-crd
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  name: runtimeconditionsprofile-admin-role
+rules:
+- apiGroups:
+  - runtimeconditions.io
+  resources:
+  - runtimeconditionsprofiles
+  verbs:
+  - '*'
+---
+# Create/update/delete RuntimeConditionsProfile resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: runtime-conditions-crd
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  name: runtimeconditionsprofile-editor-role
+rules:
+- apiGroups:
+  - runtimeconditions.io
+  resources:
+  - runtimeconditionsprofiles
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+# Read-only access to RuntimeConditionsProfile resources.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: runtime-conditions-crd
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  name: runtimeconditionsprofile-viewer-role
+rules:
+- apiGroups:
+  - runtimeconditions.io
+  resources:
+  - runtimeconditionsprofiles
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

@@ -35,6 +35,8 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate the CustomResourceDefinition.
 	"$(CONTROLLER_GEN)" crd paths="./..." output:crd:artifacts:config=config/crd/bases
+	@cp config/crd/bases/runtimeconditions.io_runtimeconditionsprofiles.yaml \
+		charts/runtime-conditions-crd/crds/runtimeconditions.io_runtimeconditionsprofiles.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -95,8 +97,8 @@ GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.8.1
-CONTROLLER_TOOLS_VERSION ?= v0.21.0
-GOLANGCI_LINT_VERSION ?= v2.13.2
+CONTROLLER_TOOLS_VERSION ?= v0.20.1
+GOLANGCI_LINT_VERSION ?= v2.12.2
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)
