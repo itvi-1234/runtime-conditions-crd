@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - "charts/**"
+      - "config/crd/bases/**"
+      - "config/rbac/**"
+      - "Makefile"
       - ".github/workflows/helm-publish.yml"
   workflow_dispatch: {}
 
@@ -26,6 +29,9 @@ jobs:
 
       - name: Setup Helm
         uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+
+      - name: Prepare chart (copy CRD, derive RBAC template)
+        run: make helm-chart
 
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u "${{ github.actor }}" --password-stdin

@@ -35,8 +35,21 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate the CustomResourceDefinition.
 	"$(CONTROLLER_GEN)" crd paths="./..." output:crd:artifacts:config=config/crd/bases
+
+.PHONY: helm-chart
+helm-chart: ## Copy the CRD and derive the RBAC template into charts/runtime-conditions-crd. Not committed - run before helm package/lint.
+	@mkdir -p charts/runtime-conditions-crd/crds charts/runtime-conditions-crd/templates
 	@cp config/crd/bases/runtimeconditions.io_runtimeconditionsprofiles.yaml \
 		charts/runtime-conditions-crd/crds/runtimeconditions.io_runtimeconditionsprofiles.yaml
+	@{ \
+		echo '{{- if .Values.rbac.create }}'; \
+		sed 's/managed-by: kustomize/managed-by: {{ .Release.Service }}/' config/rbac/runtimeconditionsprofile_admin_role.yaml; \
+		echo '---'; \
+		sed 's/managed-by: kustomize/managed-by: {{ .Release.Service }}/' config/rbac/runtimeconditionsprofile_editor_role.yaml; \
+		echo '---'; \
+		sed 's/managed-by: kustomize/managed-by: {{ .Release.Service }}/' config/rbac/runtimeconditionsprofile_viewer_role.yaml; \
+		echo '{{- end }}'; \
+	} > charts/runtime-conditions-crd/templates/rbac.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
